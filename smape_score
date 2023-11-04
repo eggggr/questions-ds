@@ -1,0 +1,117 @@
+def smape(y_actual, y_pred):
+    n = y_pred.shape[0]
+    value = (2 * np.absolute(y_pred-y_actual) / (np.absolute(y_pred) + np.absolute(y_actual))).sum()
+    result = value * 100 / n
+    return result
+
+
+smape_scorer = make_scorer(smape, greater_is_better = False)
+
+X_train_1_cat_col = list(X_train_1.select_dtypes(['object']).columns)
+X_train_1_num_col = list(X_train_1.select_dtypes(['int64', 'float64']).columns)
+
+ohe_pipe = Pipeline(
+    [
+        ('simpleImputer_ohe', SimpleImputer(missing_values=np.nan, strategy='most_frequent')), 
+        # В наших данных пропусков нет, но это может пригодится в дальнейшем для других данных.
+        ('ohe', OneHotEncoder(drop='first', sparse_output=False, handle_unknown='error'))
+    ]
+ )
+
+data_preprocessor = ColumnTransformer(
+    [
+        ('ohe', ohe_pipe, X_train_1_cat_col),
+        ('num', MinMaxScaler(), X_train_1_num_col)
+    ], 
+    remainder='passthrough'
+)
+
+
+    # создаём итоговый пайплайн: подготовка данных и модель
+pipe_final_1_tree = Pipeline(
+    [
+        ('preprocessor', data_preprocessor),
+        ('models', DecisionTreeRegressor(random_state=RANDOM_STATE))
+    ]
+)
+
+param_grid_1_tree = [
+    # словарь для модели DecisionTreeClassifier()
+    {
+        'models': [DecisionTreeRegressor(random_state=RANDOM_STATE)],
+        'models__max_depth': range(2, 5),
+        'models__max_features': range(2,5),
+        'preprocessor__num': [StandardScaler(), MinMaxScaler(), 'passthrough']  
+    }
+]
+
+grid_search_1_tree = GridSearchCV(
+    pipe_final_1_tree, 
+    param_grid=param_grid_1_tree, 
+    cv=5,
+    scoring=smape_scorer,
+    n_jobs=-1
+)
+
+grid_search_1_tree.fit(X_train_1, y_train_1)
+
+print('Лучшая модель и её параметры:\n\n', grid_search_1_tree.best_estimator_)
+print ('Метрика лучшей модели на тренировочной выборке:', grid_search_1_tree.best_score_)
+# создаём итоговый пайплайн: подготовка данных и модель
+pipe_final_1_tree = Pipeline(
+    [
+        ('preprocessor', data_preprocessor),
+        ('models', DecisionTreeRegressor(random_state=RANDOM_STATE))
+    ]
+)
+​
+param_grid_1_tree = [
+    # словарь для модели DecisionTreeClassifier()
+    {
+        'models': [DecisionTreeRegressor(random_state=RANDOM_STATE)],
+        'models__max_depth': range(2, 5),
+        'models__max_features': range(2,5),
+        'preprocessor__num': [StandardScaler(), MinMaxScaler(), 'passthrough']  
+    }
+]
+​
+grid_search_1_tree = GridSearchCV(
+    pipe_final_1_tree, 
+    param_grid=param_grid_1_tree, 
+    cv=5,
+    scoring=smape_scorer,
+    n_jobs=-1
+)
+​
+grid_search_1_tree.fit(X_train_1, y_train_1)
+​
+print('Лучшая модель и её параметры:\n\n', grid_search_1_tree.best_estimator_)
+print ('Метрика лучшей модели на тренировочной выборке:', grid_search_1_tree.best_score_)
+
+
+
+
+
+
+
+Results:
+
+Лучшая модель и её параметры:
+
+ Pipeline(steps=[('preprocessor',
+                 ColumnTransformer(remainder='passthrough',
+                                   transformers=[('ohe',
+                                                  Pipeline(steps=[('simpleImputer_ohe',
+                                                                   SimpleImputer(strategy='most_frequent')),
+                                                                  ('ohe',
+                                                                   OneHotEncoder(drop='first',
+                                                                                 sparse_output=False))]),
+                                                  ['dept', 'level', 'workload',
+                                                   'last_year_promo',
+                                                   'last_year_violations']),
+                                                 ('num', StandardScaler(),
+                                                  ['employment_years'])])),
+                ('models',
+                 DecisionTreeRegressor(max_depth=4, max_features=4,
+                                       random_state=42))])
+Метрика лучшей модели на тренировочной выборке: -36.095492609125756
